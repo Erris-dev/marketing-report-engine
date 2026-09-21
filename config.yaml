@@ -1,0 +1,39 @@
+report:
+  timezone: UTC
+  baseline_days: 28
+  currency: USD
+
+channels:
+  paid: []        # decide after inspecting source/medium values (phase 1)
+  # everything else is reported as organic/direct/referral/unknown
+
+spend_simulation:
+  seed: 42
+  cost_per_session:          # per paid channel, currency units
+    default: 0.60
+  daily_budget_base:         # per paid channel
+    default: 300
+  seasonality: true          # bump around Black Friday / Cyber Monday / Christmas
+  planted_anomalies: []      # e.g. {channel: ..., week: "2020-W49", cost_multiplier: 2.0}
+
+anomaly:
+  method: robust_z           # median + MAD
+  z_threshold: 3.5
+  min_baseline_days: 14
+  rules:
+    cost_wow_increase: 0.40            # CPA or cost per session up by more than 40% WoW
+    conversion_rate_wow_drop: 0.30     # conversion rate down by more than 30% WoW...
+    sessions_stable_max_change: 0.10   # ...while sessions moved less than 10% WoW
+    revenue_share_change_pp: 15        # channel revenue share moved > 15 percentage points
+
+llm:
+  provider: openrouter
+  base_url: https://openrouter.ai/api/v1
+  model: google/gemini-3.1-flash-lite
+  temperature: 0.2
+  max_retries: 1
+  timeout_seconds: 60
+  cache_dir: data/llm_cache
+
+delivery:
+  method: telegram           # telegram | email | none

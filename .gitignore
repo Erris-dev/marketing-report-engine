@@ -1,0 +1,30 @@
+# Secrets
+.env
+*.json.key
+service-account*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Data and outputs (samples are committed)
+data/
+out/*
+!out/samples/
+!out/samples/**
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
