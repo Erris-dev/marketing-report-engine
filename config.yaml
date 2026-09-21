@@ -36,4 +36,9 @@ llm:
   cache_dir: data/llm_cache
 
 delivery:
-  method: telegram           # telegram | email | none
+  method: email              # email | none (none just saves the PDF)
+  email:
+    smtp_host: smtp.gmail.com
+    smtp_port: 587
+    use_starttls: true
+    subject_template: "Weekly marketing report {week}"

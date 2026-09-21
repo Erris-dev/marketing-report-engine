@@ -53,19 +53,44 @@ def test_spend_maps_require_default() -> None:
 
 def test_env_file_parsing_and_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     env = tmp_path / ".env"
-    env.write_text('# comment\nOPENROUTER_API_KEY="sk-file"\nGCP_PROJECT=\nTELEGRAM_CHAT_ID=1\n')
+    env.write_text(
+        '# comment\nOPENROUTER_API_KEY="sk-file"\nGCP_PROJECT=\n'
+        "SMTP_USER=file@gmail.com\nSMTP_PASSWORD=app-pass\n"
+        "REPORT_RECIPIENTS= a@x.com, b@y.com ,\n"
+    )
     assert read_env_file(env)["OPENROUTER_API_KEY"] == "sk-file"
 
-    for name in ("OPENROUTER_API_KEY", "GCP_PROJECT", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+    for name in (
+        "OPENROUTER_API_KEY",
+        "GCP_PROJECT",
+        "SMTP_USER",
+        "SMTP_PASSWORD",
+        "REPORT_RECIPIENTS",
+    ):
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("TELEGRAM_CHAT_ID", "99")
+    monkeypatch.setenv("SMTP_USER", "env@gmail.com")
 
     secrets = load_secrets(env)
     assert secrets.openrouter_api_key is not None
     assert secrets.openrouter_api_key.get_secret_value() == "sk-file"
     assert "sk-file" not in repr(secrets)
     assert secrets.gcp_project is None
-    assert secrets.telegram_chat_id == "99"
+    assert secrets.smtp_user == "env@gmail.com"
+    assert secrets.smtp_password is not None
+    assert "app-pass" not in repr(secrets)
+    assert secrets.report_recipients == ["a@x.com", "b@y.com"]
+
+
+def test_repo_config_uses_gmail() -> None:
+    cfg = load_config(REPO_ROOT / "config.yaml")
+    assert cfg.delivery.method == "email"
+    assert cfg.delivery.email.smtp_host == "smtp.gmail.com"
+    assert cfg.delivery.email.smtp_port == 587
+
+
+def test_telegram_is_no_longer_a_delivery_method() -> None:
+    with pytest.raises(ValidationError):
+        AppConfig.model_validate({"delivery": {"method": "telegram"}})
 
 
 def test_cli_help() -> None:

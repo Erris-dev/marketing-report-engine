@@ -84,8 +84,17 @@ class LLMConfig(_Strict):
     cache_dir: Path = Path("data/llm_cache")
 
 
+class EmailConfig(_Strict):
+    # Server settings are not secret; the login and recipients live in .env.
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = Field(587, gt=0, lt=65536)
+    use_starttls: bool = True
+    subject_template: str = "Weekly marketing report {week}"
+
+
 class DeliveryConfig(_Strict):
-    method: Literal["telegram", "email", "none"] = "none"
+    method: Literal["email", "none"] = "none"
+    email: EmailConfig = Field(default_factory=EmailConfig)
 
 
 class AppConfig(_Strict):
@@ -104,8 +113,9 @@ class Secrets(BaseModel):
 
     openrouter_api_key: SecretStr | None = None
     gcp_project: str | None = None
-    telegram_bot_token: SecretStr | None = None
-    telegram_chat_id: str | None = None
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    report_recipients: list[str] = Field(default_factory=list)
 
 
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
@@ -145,9 +155,11 @@ def load_secrets(env_file: Path = DEFAULT_ENV_PATH) -> Secrets:
         # Empty strings (as in .env.example) mean "not set".
         return merged.get(name) or None
 
+    recipients = [r.strip() for r in (get("REPORT_RECIPIENTS") or "").split(",") if r.strip()]
     return Secrets(
         openrouter_api_key=get("OPENROUTER_API_KEY"),
         gcp_project=get("GCP_PROJECT"),
-        telegram_bot_token=get("TELEGRAM_BOT_TOKEN"),
-        telegram_chat_id=get("TELEGRAM_CHAT_ID"),
+        smtp_user=get("SMTP_USER"),
+        smtp_password=get("SMTP_PASSWORD"),
+        report_recipients=recipients,
     )
