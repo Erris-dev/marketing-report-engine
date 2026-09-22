@@ -8,11 +8,12 @@ while secrets never leave the process.
 from __future__ import annotations
 
 import os
+from datetime import date
 from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
 
 DEFAULT_CONFIG_PATH = Path("config.yaml")
 DEFAULT_ENV_PATH = Path(".env")
@@ -24,6 +25,21 @@ ISO_WEEK_PATTERN = r"^\d{4}-W(0[1-9]|[1-4]\d|5[0-3])$"
 class _Strict(BaseModel):
     # Reject unknown keys so a typo in config.yaml fails loudly instead of being ignored.
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class SourceConfig(_Strict):
+    table: str = "bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*"
+    start_date: date = date(2020, 11, 1)
+    end_date: date = date(2021, 1, 31)
+    # Hard cap passed to BigQuery: a query that would scan more fails instead of billing.
+    max_bytes_billed_gb: float = Field(5, gt=0)
+    raw_path: Path = Path("data/raw/ga4_daily.parquet")
+
+    @model_validator(mode="after")
+    def _ordered_dates(self) -> SourceConfig:
+        if self.start_date > self.end_date:
+            raise ValueError("start_date must not be after end_date")
+        return self
 
 
 class ReportConfig(_Strict):
@@ -98,6 +114,7 @@ class DeliveryConfig(_Strict):
 
 
 class AppConfig(_Strict):
+    source: SourceConfig = Field(default_factory=SourceConfig)
     report: ReportConfig = Field(default_factory=ReportConfig)
     channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
     spend_simulation: SpendSimulationConfig = Field(default_factory=SpendSimulationConfig)

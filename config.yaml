@@ -1,11 +1,19 @@
+source:
+  table: bigquery-public-data.ga4_obfuscated_sample_ecommerce.events_*
+  start_date: 2020-11-01
+  end_date: 2021-01-31
+  max_bytes_billed_gb: 5     # BigQuery refuses any query that would scan more
+  raw_path: data/raw/ga4_daily.parquet
+
 report:
-  timezone: UTC
+  timezone: UTC              # GA4 event_date in this dataset is the UTC date (verified)
   baseline_days: 28
   currency: USD
 
 channels:
-  paid: []        # decide after inspecting source/medium values (phase 1)
-  # everything else is reported as organic/direct/referral/unknown
+  # Mapping lives in sql/channel_case.sql; see docs/DATA_NOTES.md.
+  paid: [paid_search]
+  # other channels: organic_search, referral, direct, other, unknown
 
 spend_simulation:
   seed: 42
