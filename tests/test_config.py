@@ -48,7 +48,7 @@ def test_planted_anomaly_rejects_bad_week(week: str) -> None:
 
 def test_spend_maps_require_default() -> None:
     with pytest.raises(ValidationError):
-        AppConfig.model_validate({"spend_simulation": {"cost_per_session": {"cpc": 0.5}}})
+        AppConfig.model_validate({"spend_simulation": {"daily_budget_base": {"paid_search": 50}}})
 
 
 def test_env_file_parsing_and_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -60,12 +60,15 @@ class PlantedAnomaly(_Strict):
 
 class SpendSimulationConfig(_Strict):
     seed: int = 42
-    cost_per_session: dict[str, float] = Field(default_factory=lambda: {"default": 0.60})
-    daily_budget_base: dict[str, float] = Field(default_factory=lambda: {"default": 300.0})
+    # $50/day is ~$0.60 per session on the real paid_search traffic (~83 sessions/day).
+    daily_budget_base: dict[str, float] = Field(default_factory=lambda: {"default": 50.0})
+    # Standard deviation of the multiplicative log-normal day-to-day noise.
+    noise_sigma: float = Field(0.10, ge=0, le=1)
     seasonality: bool = True
     planted_anomalies: list[PlantedAnomaly] = Field(default_factory=list)
+    output_path: Path = Path("data/raw/sim_spend.parquet")
 
-    @field_validator("cost_per_session", "daily_budget_base")
+    @field_validator("daily_budget_base")
     @classmethod
     def _needs_default_and_non_negative(cls, value: dict[str, float]) -> dict[str, float]:
         # A "default" entry means a newly added paid channel always has a value.
@@ -74,6 +77,9 @@ class SpendSimulationConfig(_Strict):
         if any(v < 0 for v in value.values()):
             raise ValueError("values must be non-negative")
         return value
+
+    def budget_for(self, channel: str) -> float:
+        return self.daily_budget_base.get(channel, self.daily_budget_base["default"])
 
 
 class AnomalyRulesConfig(_Strict):

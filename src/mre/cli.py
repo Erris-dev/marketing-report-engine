@@ -11,6 +11,7 @@ import yaml
 from mre import __version__
 from mre.config import DEFAULT_CONFIG_PATH, load_config, load_secrets
 from mre.sources import ga4_bigquery as ga4
+from mre.sources import sim_spend as sim
 
 app = typer.Typer(
     help="Marketing Report Engine: GA4 e-commerce data to a weekly marketing PDF.",
@@ -65,6 +66,26 @@ def extract(
     ga4.extract(client, cfg)
     typer.echo(f"Wrote {cfg.raw_path}\n")
     typer.echo(ga4.profile(ga4.load_raw(cfg.raw_path), cfg))
+
+
+@app.command("simulate-spend")
+def simulate_spend(config: ConfigOption = DEFAULT_CONFIG_PATH) -> None:
+    """Generate simulated ad spend for paid channels (deterministic, labeled simulated)."""
+    cfg = load_config(config)
+    df = sim.simulate_spend(
+        cfg.channels.paid, cfg.source.start_date, cfg.source.end_date, cfg.spend_simulation
+    )
+    sim.write_sim_spend(df, cfg.spend_simulation.output_path)
+    typer.echo(f"Wrote {len(df)} rows to {cfg.spend_simulation.output_path} (SIMULATED spend)\n")
+    df["week"] = [sim.iso_week_label(d) for d in df["date"].dt.date]
+    weekly = (
+        df.groupby(["channel", "week"], sort=True)
+        .agg(spend=("spend", "sum"), planted=("planted_multiplier", "max"))
+        .reset_index()
+    )
+    for row in weekly.itertuples(index=False):
+        mark = f"  <- planted x{row.planted:g}" if row.planted != 1 else ""
+        typer.echo(f"{row.channel}  {row.week}  {row.spend:>9,.2f}{mark}")
 
 
 @app.command("check-config")

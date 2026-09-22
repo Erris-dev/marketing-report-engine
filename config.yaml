@@ -17,12 +17,14 @@ channels:
 
 spend_simulation:
   seed: 42
-  cost_per_session:          # per paid channel, currency units
-    default: 0.60
-  daily_budget_base:         # per paid channel
-    default: 300
+  # spend = daily_budget_base * seasonality_factor * noise (see src/mre/sources/sim_spend.py)
+  daily_budget_base:         # per paid channel, currency units per day
+    default: 50              # ~0.60 per session on real paid_search traffic
+  noise_sigma: 0.10          # day-to-day log-normal noise
   seasonality: true          # bump around Black Friday / Cyber Monday / Christmas
-  planted_anomalies: []      # e.g. {channel: ..., week: "2020-W49", cost_multiplier: 2.0}
+  planted_anomalies:         # deliberate test signal for anomaly detection (phase 5)
+    - {channel: paid_search, week: "2021-W02", cost_multiplier: 2.0}
+  output_path: data/raw/sim_spend.parquet
 
 anomaly:
   method: robust_z           # median + MAD
