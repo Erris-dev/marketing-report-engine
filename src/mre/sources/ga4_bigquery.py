@@ -39,6 +39,9 @@ EXPECTED_COLUMNS = (
 
 GB = 1_000_000_000
 
+# Every label sql/channel_case.sql can produce.
+CHANNELS = ("paid_search", "organic_search", "referral", "direct", "other", "unknown")
+
 
 class QueryTooLargeError(RuntimeError):
     """The dry run says the query would scan more than the configured cap."""

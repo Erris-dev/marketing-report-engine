@@ -4,6 +4,7 @@ source:
   end_date: 2021-01-31
   max_bytes_billed_gb: 5     # BigQuery refuses any query that would scan more
   raw_path: data/raw/ga4_daily.parquet
+  quarantine_dir: data/quarantine   # failing rows land here with a reason column
 
 report:
   timezone: UTC              # GA4 event_date in this dataset is the UTC date (verified)

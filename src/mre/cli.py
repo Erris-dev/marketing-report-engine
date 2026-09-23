@@ -5,10 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
+import pandas as pd
 import typer
 import yaml
 
-from mre import __version__
+from mre import __version__, schemas
 from mre.config import DEFAULT_CONFIG_PATH, load_config, load_secrets
 from mre.sources import ga4_bigquery as ga4
 from mre.sources import sim_spend as sim
@@ -86,6 +87,31 @@ def simulate_spend(config: ConfigOption = DEFAULT_CONFIG_PATH) -> None:
     for row in weekly.itertuples(index=False):
         mark = f"  <- planted x{row.planted:g}" if row.planted != 1 else ""
         typer.echo(f"{row.channel}  {row.week}  {row.spend:>9,.2f}{mark}")
+
+
+@app.command()
+def validate(config: ConfigOption = DEFAULT_CONFIG_PATH) -> None:
+    """Validate cached data; failing rows go to the quarantine folder with a reason."""
+    cfg = load_config(config)
+    src = cfg.source
+    tables = {
+        "ga4_daily": (
+            ga4.load_raw(src.raw_path),
+            schemas.ga4_daily_schema(src.start_date, src.end_date),
+        ),
+        "sim_spend": (
+            pd.read_parquet(cfg.spend_simulation.output_path),
+            schemas.sim_spend_schema(src.start_date, src.end_date, cfg.channels.paid),
+        ),
+    }
+    for name, (df, schema) in tables.items():
+        result = schemas.validate_and_quarantine(df, schema)
+        path = schemas.write_quarantine(result, name, src.quarantine_dir)
+        typer.echo(
+            f"{name}: {len(result.valid)} valid, {result.quarantined_count} quarantined -> {path}"
+        )
+        for reason, count in result.quarantined["reason"].value_counts().items():
+            typer.echo(f"  {count:>5}  {reason}")
 
 
 @app.command("check-config")

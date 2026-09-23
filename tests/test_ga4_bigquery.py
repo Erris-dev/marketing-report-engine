@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -38,6 +39,12 @@ def test_channel_mapping(source: str | None, medium: str | None, channel: str) -
     row = duckdb.execute(sql, [source, medium]).fetchone()
     assert row is not None
     assert row[0] == channel
+
+
+def test_sql_mapping_only_produces_known_channels() -> None:
+    # Keeps the SQL mapping and the validation schema's channel list in sync.
+    labels = set(re.findall(r"(?:THEN|ELSE)\s+'([a-z_]+)'", ga4.channel_case_sql()))
+    assert labels == set(ga4.CHANNELS)
 
 
 def test_render_sql_fills_template_and_keeps_date_filter() -> None:

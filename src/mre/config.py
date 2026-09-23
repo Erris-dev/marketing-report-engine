@@ -34,6 +34,7 @@ class SourceConfig(_Strict):
     # Hard cap passed to BigQuery: a query that would scan more fails instead of billing.
     max_bytes_billed_gb: float = Field(5, gt=0)
     raw_path: Path = Path("data/raw/ga4_daily.parquet")
+    quarantine_dir: Path = Path("data/quarantine")
 
     @model_validator(mode="after")
     def _ordered_dates(self) -> SourceConfig:
