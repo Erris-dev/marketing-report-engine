@@ -76,3 +76,28 @@ firings = **4,907 purchases**, revenue **$339,457**. Events whose transaction id
 
 Referral's large revenue share is likely driven by store self-referrals (for example,
 returning from a payment page); worth keeping in mind when reading the report.
+
+## Known artifacts at the end of the dataset
+
+Found while computing weekly metrics (Phase 4). They are properties of the public sample,
+not pipeline bugs, and the report must surface them rather than present them as business
+changes.
+
+| From | What happens | Effect |
+|---|---|---|
+| 2021-01-22 | `google / cpc` tagging nearly stops: paid_search falls from ~90 to 1-5 sessions/day | 2021-W04 paid_search has 18 sessions and 0 purchases; spend metrics look extreme |
+| 2021-01-26 | Most purchase events stop carrying revenue (purchase sessions continue at ~50/day) | 2021-W04 has 240 purchases without revenue vs 98 with; revenue appears to drop 81% WoW |
+
+`missing_revenue_share` (purchases without revenue / all purchases) is computed per week so
+the report and anomaly rules can call this a tracking gap.
+
+## Metric conventions
+
+- Weeks are ISO weeks. Only complete weeks (7 days present) are reported: 2020-W45 to
+  2021-W04 (13 weeks). 2020-W44 contains only 2020-11-01 and is excluded.
+- Week-over-week compares a complete week with the complete week 7 days earlier (so
+  2021-W01 compares with 2020-W53); otherwise it is null.
+- Ratios with a zero or missing denominator are null, never infinity.
+- `conversion_rate` = purchase_sessions / sessions; `aov` = revenue / purchases.
+- Spend metrics exist only for paid channels, are simulated, and are null for `total`.
+- Weekly `users` is not reported: distinct users are not additive across days.

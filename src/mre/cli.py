@@ -13,6 +13,7 @@ from mre import __version__, schemas
 from mre.config import DEFAULT_CONFIG_PATH, load_config, load_secrets
 from mre.sources import ga4_bigquery as ga4
 from mre.sources import sim_spend as sim
+from mre.weeks import iso_week_label
 
 app = typer.Typer(
     help="Marketing Report Engine: GA4 e-commerce data to a weekly marketing PDF.",
@@ -78,7 +79,7 @@ def simulate_spend(config: ConfigOption = DEFAULT_CONFIG_PATH) -> None:
     )
     sim.write_sim_spend(df, cfg.spend_simulation.output_path)
     typer.echo(f"Wrote {len(df)} rows to {cfg.spend_simulation.output_path} (SIMULATED spend)\n")
-    df["week"] = [sim.iso_week_label(d) for d in df["date"].dt.date]
+    df["week"] = [iso_week_label(d) for d in df["date"].dt.date]
     weekly = (
         df.groupby(["channel", "week"], sort=True)
         .agg(spend=("spend", "sum"), planted=("planted_multiplier", "max"))

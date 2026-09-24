@@ -6,11 +6,11 @@ import pytest
 
 from mre.config import SpendSimulationConfig
 from mre.sources.sim_spend import (
-    iso_week_label,
     seasonality_factor,
     simulate_spend,
     thanksgiving,
 )
+from mre.weeks import iso_week_label
 
 START, END = date(2020, 11, 1), date(2021, 1, 31)
 

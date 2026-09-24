@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from mre.config import SpendSimulationConfig
+from mre.weeks import iso_week_label
 
 COLUMNS = ("date", "channel", "spend", "is_simulated", "planted_multiplier")
 
@@ -45,11 +46,6 @@ def seasonality_factor(day: date) -> float:
     if date(day.year, 12, 25) <= day <= date(day.year, 12, 26):
         return 0.6
     return 1.0
-
-
-def iso_week_label(day: date) -> str:
-    year, week, _ = day.isocalendar()
-    return f"{year}-W{week:02d}"
 
 
 def _channel_rng(seed: int, channel: str) -> np.random.Generator:
