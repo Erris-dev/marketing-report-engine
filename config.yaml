@@ -31,11 +31,14 @@ anomaly:
   method: robust_z           # median + MAD
   z_threshold: 3.5
   min_baseline_days: 14
+  min_daily_volume: 5        # skip daily z-scores for series with < 5 events/day (e.g. paid purchases)
+  metrics: [sessions, purchases, revenue, conversion_rate, spend, cost_per_session]  # daily z-score
   rules:
     cost_wow_increase: 0.40            # CPA or cost per session up by more than 40% WoW
     conversion_rate_wow_drop: 0.30     # conversion rate down by more than 30% WoW...
     sessions_stable_max_change: 0.10   # ...while sessions moved less than 10% WoW
     revenue_share_change_pp: 15        # channel revenue share moved > 15 percentage points
+    tracking_gap_share: 0.20           # > 20% of a week's purchases have no revenue recorded
 
 llm:
   provider: openrouter

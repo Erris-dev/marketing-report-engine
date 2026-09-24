@@ -88,12 +88,25 @@ class AnomalyRulesConfig(_Strict):
     conversion_rate_wow_drop: float = Field(0.30, gt=0, lt=1)
     sessions_stable_max_change: float = Field(0.10, ge=0)
     revenue_share_change_pp: float = Field(15, gt=0, le=100)
+    tracking_gap_share: float = Field(0.20, gt=0, le=1)
 
 
 class AnomalyConfig(_Strict):
     method: Literal["robust_z"] = "robust_z"
     z_threshold: float = Field(3.5, gt=0)
     min_baseline_days: int = Field(14, gt=0)
+    # Skip daily scoring when the underlying count's baseline median is below this.
+    min_daily_volume: float = Field(5, ge=0)
+    metrics: list[str] = Field(
+        default_factory=lambda: [
+            "sessions",
+            "purchases",
+            "revenue",
+            "conversion_rate",
+            "spend",
+            "cost_per_session",
+        ]
+    )
     rules: AnomalyRulesConfig = Field(default_factory=AnomalyRulesConfig)
 
 
