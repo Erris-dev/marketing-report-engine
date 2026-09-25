@@ -47,6 +47,8 @@ class ReportConfig(_Strict):
     timezone: str = "UTC"
     baseline_days: int = Field(28, gt=0)
     currency: str = Field("USD", min_length=3, max_length=3)
+    # Anomalies passed to facts.json per week, most severe first.
+    max_anomalies: int = Field(8, gt=0)
 
 
 class ChannelsConfig(_Strict):
@@ -118,6 +120,11 @@ class LLMConfig(_Strict):
     max_retries: int = Field(1, ge=0)
     timeout_seconds: float = Field(60, gt=0)
     cache_dir: Path = Path("data/llm_cache")
+    # Versioned system prompt; the version is part of the cache key.
+    system_prompt_path: Path = Path("prompts/narrative_system_v1.md")
+    # USD per million tokens, used only to log an estimated cost per run.
+    input_price_per_mtok: float = Field(0.25, ge=0)
+    output_price_per_mtok: float = Field(1.50, ge=0)
 
 
 class EmailConfig(_Strict):

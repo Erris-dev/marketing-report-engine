@@ -10,6 +10,7 @@ report:
   timezone: UTC              # GA4 event_date in this dataset is the UTC date (verified)
   baseline_days: 28
   currency: USD
+  max_anomalies: 8           # anomalies per week in facts.json (most severe first)
 
 channels:
   # Mapping lives in sql/channel_case.sql; see docs/DATA_NOTES.md.
@@ -48,6 +49,9 @@ llm:
   max_retries: 1
   timeout_seconds: 60
   cache_dir: data/llm_cache
+  system_prompt_path: prompts/narrative_system_v1.md
+  input_price_per_mtok: 0.25     # USD, for the logged cost estimate only
+  output_price_per_mtok: 1.50
 
 delivery:
   method: email              # email | none (none just saves the PDF)
