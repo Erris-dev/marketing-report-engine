@@ -31,7 +31,7 @@ def make_config(tmp_path: Path, **overrides: Any) -> AppConfig:
         "spend_simulation": {"seasonality": False, "noise_sigma": 0.0},
         "llm": {
             "cache_dir": str(tmp_path / "llm_cache"),
-            "system_prompt_path": str(REPO_ROOT / "prompts" / "narrative_system_v1.md"),
+            "system_prompt_path": str(REPO_ROOT / "prompts" / "narrative_system_v2.md"),
         },
     }
     for section, values in overrides.items():

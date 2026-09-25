@@ -49,7 +49,7 @@ llm:
   max_retries: 1
   timeout_seconds: 60
   cache_dir: data/llm_cache
-  system_prompt_path: prompts/narrative_system_v1.md
+  system_prompt_path: prompts/narrative_system_v2.md
   input_price_per_mtok: 0.25     # USD, for the logged cost estimate only
   output_price_per_mtok: 1.50
 
