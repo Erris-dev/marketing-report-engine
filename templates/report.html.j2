@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Weekly Marketing Report {{ week }}</title>
+<style>
+  :root {
+    --surface: #fcfcfb;
+    --page: #ffffff;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --hairline: #e1e0d9;
+    --band: #f4f3ef;
+    --up: #006300;
+    --down: #b3261e;
+    --critical: #d03b3b;
+    --serious: #ec835a;
+    --accent: #2a78d6;
+  }
+  @page {
+    size: A4;
+    margin: 16mm 14mm 22mm 14mm;
+    @bottom-left {
+      content: "{{ simulated_note }}\A {{ narrative_disclosure }}";
+      white-space: pre;
+      font-family: "DejaVu Sans", sans-serif;
+      font-size: 7pt;
+      color: #52514e;
+    }
+    @bottom-right {
+      content: "{{ week }} · page " counter(page) " of " counter(pages);
+      font-family: "DejaVu Sans", sans-serif;
+      font-size: 7pt;
+      color: #898781;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Sans", "Segoe UI", system-ui, sans-serif;
+    font-size: 8.8pt;
+    line-height: 1.45;
+    color: var(--ink);
+    background: var(--page);
+    margin: 0;
+  }
+  h1 { font-size: 19pt; margin: 0; letter-spacing: -0.01em; }
+  h2 {
+    font-size: 11.5pt;
+    margin: 18pt 0 6pt;
+    padding-bottom: 3pt;
+    border-bottom: 1px solid var(--hairline);
+  }
+  h3 { font-size: 9.5pt; margin: 10pt 0 4pt; }
+  p { margin: 0 0 6pt; }
+  .muted { color: var(--muted); }
+  .secondary { color: var(--ink-2); }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; }
+  .header .dates { color: var(--ink-2); font-size: 9pt; text-align: right; }
+  .kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 7pt; color: var(--muted); }
+
+  .tiles { display: flex; gap: 6pt; margin: 12pt 0 4pt; }
+  .tile {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--hairline);
+    border-radius: 6pt;
+    padding: 7pt 9pt;
+  }
+  .tile .label { font-size: 7.5pt; color: var(--ink-2); }
+  .tile .value { font-size: 14pt; font-weight: bold; margin: 2pt 0; }
+  .delta { font-size: 7.8pt; white-space: nowrap; }
+  .delta.good { color: var(--up); }
+  .delta.bad { color: var(--down); }
+  .delta.neutral { color: var(--ink-2); }
+  .delta.none { color: var(--muted); }
+
+  .summary {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    padding: 8pt 11pt;
+    margin: 8pt 0;
+    font-size: 9.4pt;
+  }
+  .label-ai {
+    display: inline-block;
+    font-size: 6.8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    border: 1px solid var(--hairline);
+    border-radius: 3pt;
+    padding: 0 4pt;
+    margin-bottom: 4pt;
+  }
+  .columns { display: flex; gap: 14pt; }
+  .columns > div { flex: 1; }
+  ul { margin: 0; padding-left: 13pt; }
+  li { margin-bottom: 4pt; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 7.3pt; }
+  table.kpi td, table.kpi th { padding-left: 2.5pt; padding-right: 2.5pt; }
+  td.nowrap, table.kpi td:first-child { white-space: nowrap; }
+  th {
+    text-align: right;
+    font-weight: normal;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--hairline);
+    padding: 3pt 4pt;
+  }
+  td {
+    text-align: right;
+    padding: 3.5pt 4pt;
+    border-bottom: 1px solid var(--hairline);
+    font-variant-numeric: tabular-nums;
+    vertical-align: top;
+  }
+  th:first-child, td:first-child { text-align: left; }
+  td.left, th.left { text-align: left; }
+  tr.total td { font-weight: bold; background: var(--band); }
+  .swatch {
+    display: inline-block;
+    width: 7pt;
+    height: 7pt;
+    border-radius: 2pt;
+    margin-right: 4pt;
+    vertical-align: baseline;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 6.5pt;
+    border-radius: 3pt;
+    padding: 0 3pt;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+  }
+  .sev { font-weight: bold; white-space: nowrap; }
+  .sev.high { color: var(--critical); }
+  .sev.medium { color: #9a4a1c; }
+  .chart { width: 100%; margin: 4pt 0 10pt; break-inside: avoid; }
+  .chart-row { display: flex; gap: 10pt; }
+  .chart-row > div { flex: 1; }
+  .note { font-size: 7.3pt; color: var(--ink-2); }
+  .page-break { break-before: page; }
+  .dq { display: flex; gap: 6pt; flex-wrap: wrap; }
+  .dq .tile { flex: 1 1 30%; }
+  .avoid-break { break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="kicker">Weekly marketing report · Google Merchandise Store (GA4 sample)</div>
+    <h1>Week {{ week }}</h1>
+  </div>
+  <div class="dates">
+    {{ week_start }} to {{ week_end }}<br>
+    {% if previous_week %}compared with {{ previous_week }}{% else %}no previous complete week{% endif %}
+  </div>
+</div>
+
+<div class="tiles">
+  {% for k in kpis %}
+  <div class="tile">
+    <div class="label">{{ k.label }}</div>
+    <div class="value">{{ k.value }}</div>
+    <div class="delta {{ k.delta.tone }}">{{ k.delta.text }} <span class="muted">vs previous week</span></div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>Summary</h2>
+<div class="summary">
+  <div class="label-ai">{% if narrative_source == "fallback" %}Template summary{% else %}AI-generated summary{% endif %}</div>
+  <p>{{ narrative.summary }}</p>
+  <p class="note">{{ narrative_disclosure }}</p>
+</div>
+
+<div class="columns">
+  <div>
+    <h3>Key findings</h3>
+    <ul>{% for f in narrative.findings %}<li>{{ f }}</li>{% endfor %}</ul>
+  </div>
+  <div>
+    <h3>Things to check</h3>
+    <ul>{% for c in narrative.checks %}<li>{{ c }}</li>{% endfor %}</ul>
+  </div>
+</div>
+
+<h2>KPIs by channel</h2>
+<table class="kpi">
+  <thead>
+    <tr>
+      <th>Channel</th>
+      <th>Sessions</th><th>Δ</th>
+      <th>Purchases</th><th>Δ</th>
+      <th>Revenue</th><th>Previous</th><th>Δ</th>
+      <th>Conv. rate</th><th>Δ</th>
+      <th>AOV</th>
+      <th>Rev. share</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in channel_rows %}
+    <tr class="{{ 'total' if r.is_total else '' }}">
+      <td>{% if r.color %}<span class="swatch" style="background: {{ r.color }}"></span>{% endif %}{{ r.channel }}</td>
+      <td>{{ r.sessions }}</td><td class="delta {{ r.sessions_delta.tone }}">{{ r.sessions_delta.text }}</td>
+      <td>{{ r.purchases }}</td><td class="delta {{ r.purchases_delta.tone }}">{{ r.purchases_delta.text }}</td>
+      <td>{{ r.revenue }}</td><td class="secondary">{{ r.prev_revenue }}</td>
+      <td class="delta {{ r.revenue_delta.tone }}">{{ r.revenue_delta.text }}</td>
+      <td>{{ r.conversion_rate }}</td><td class="delta {{ r.conversion_delta.tone }}">{{ r.conversion_delta.text }}</td>
+      <td>{{ r.aov }}</td>
+      <td>{{ r.revenue_share }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="note">Δ is the change versus the previous complete week. Conversion rate = sessions with a purchase / sessions.</p>
+
+{% if paid_rows %}
+<div class="avoid-break">
+<h3>Paid channels <span class="tag">SIMULATED SPEND</span></h3>
+<table>
+  <thead>
+    <tr>
+      <th>Channel</th>
+      <th>Spend</th><th>Δ</th>
+      <th>Cost per session</th><th>Δ</th>
+      <th>CPA</th><th>Δ</th>
+      <th>ROAS</th><th>Δ</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for r in paid_rows %}
+    <tr>
+      <td>{{ r.channel }}</td>
+      <td>{{ r.spend }}</td><td class="delta {{ r.spend_delta.tone }}">{{ r.spend_delta.text }}</td>
+      <td>{{ r.cost_per_session }}</td><td class="delta {{ r.cps_delta.tone }}">{{ r.cps_delta.text }}</td>
+      <td>{{ r.cpa }}</td><td class="delta {{ r.cpa_delta.tone }}">{{ r.cpa_delta.text }}</td>
+      <td>{{ r.roas }}</td><td class="delta {{ r.roas_delta.tone }}">{{ r.roas_delta.text }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p class="note">The GA4 sample has no ad spend or ad clicks. Spend is simulated (seeded), and sessions stand in for clicks, so cost per session is reported instead of CPC. For costs an increase (▲) is unfavourable.</p>
+</div>
+{% endif %}
+
+<h2>Charts</h2>
+<img class="chart" src="{{ charts.revenue_trend }}" alt="Weekly revenue trend with anomaly markers">
+<div class="chart-row">
+  <div><img class="chart" src="{{ charts.kpi_changes }}" alt="Week-over-week KPI changes"></div>
+  <div><img class="chart" src="{{ charts.funnel }}" alt="Conversion funnel"></div>
+</div>
+<img class="chart" src="{{ charts.channel_mix }}" alt="Channel mix of sessions and revenue">
+<p class="note">Funnel steps count sessions. {{ funnel_note }}</p>
+
+<h2>Anomalies</h2>
+{% if anomaly_rows %}
+<p class="secondary">{{ anomaly_count }} anomalies were detected in {{ week }}; the {{ anomaly_rows|length }} most severe are listed. Seasonal notes give possible context, not causes.</p>
+<table class="avoid-break">
+  <thead>
+    <tr>
+      <th class="left">When</th><th class="left">Channel</th><th class="left">Metric</th>
+      <th class="left">Detected by</th><th>Value</th><th>Typical</th><th class="left">Severity</th>
+      <th class="left">Context</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for a in anomaly_rows %}
+    <tr>
+      <td class="left">{{ a.when }}</td>
+      <td class="left">{{ a.channel }}</td>
+      <td class="left">{{ a.metric }}{% if a.simulated %} <span class="tag">SIMULATED</span>{% endif %}</td>
+      <td class="left">{{ a.rule }}</td>
+      <td class="nowrap">{{ a.direction }} {{ a.value }}</td>
+      <td class="secondary">{{ a.baseline }}</td>
+      <td class="left"><span class="sev {{ a.severity }}">{{ '●' if a.severity == 'high' else '○' }} {{ a.severity|capitalize }}</span></td>
+      <td class="left note">{{ a.seasonal_context }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="secondary">No anomalies were detected in {{ week }}.</p>
+{% endif %}
+
+<h2>Data quality</h2>
+<div class="dq">
+  <div class="tile"><div class="label">Rows quarantined</div><div class="value">{{ data_quality.rows_quarantined }}</div><div class="note">failed validation, kept aside with a reason</div></div>
+  <div class="tile"><div class="label">Days covered</div><div class="value">{{ data_quality.days_covered }} of 7</div><div class="note">complete ISO week</div></div>
+  <div class="tile"><div class="label">Unknown channel</div><div class="value">{{ '%.1f'|format(data_quality.unknown_channel_session_share_pct) }}%</div><div class="note">of sessions have no usable source</div></div>
+  <div class="tile"><div class="label">Purchases without revenue</div><div class="value">{{ '{:,}'.format(data_quality.purchases_missing_revenue) }}</div><div class="note">{{ '%.1f'|format(data_quality.missing_revenue_share_pct or 0) }}% of purchases; excluded from revenue</div></div>
+  <div class="tile"><div class="label">Duplicate purchase events</div><div class="value">{{ '{:,}'.format(data_quality.duplicate_purchase_events) }}</div><div class="note">repeat events for one transaction, counted once</div></div>
+</div>
+<p class="note">Source: public GA4 obfuscated sample (bigquery-public-data.ga4_obfuscated_sample_ecommerce). Some fields are placeholders by design; see docs/DATA_NOTES.md. Currency: {{ currency }}.</p>
+
+</body>
+</html>

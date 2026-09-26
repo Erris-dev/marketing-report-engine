@@ -18,6 +18,7 @@ from mre.facts import build_facts
 from mre.metrics import complete_weeks
 from mre.narrative import generate_narrative
 from mre.pipeline import prepare
+from mre.render import PdfUnavailableError, render_report
 from mre.sources import ga4_bigquery as ga4
 from mre.sources import sim_spend as sim
 from mre.weeks import iso_week_label
@@ -32,6 +33,7 @@ ConfigOption = Annotated[
 ]
 WeekOption = Annotated[str, typer.Option("--week", "-w", help="ISO week, e.g. 2020-W48.")]
 FACTS_DIR = Path("out/facts")
+REPORTS_DIR = Path("out/reports")
 
 
 def _version_callback(value: bool) -> None:
@@ -49,6 +51,8 @@ def main(
 ) -> None:
     """Marketing Report Engine."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    for noisy in ("weasyprint", "fontTools", "httpx", "httpx2"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
     # google-auth warns about user credentials without a quota project; harmless here.
     warnings.filterwarnings("ignore", message=".*quota project.*")
 
@@ -71,6 +75,30 @@ def facts(week: WeekOption, config: ConfigOption = DEFAULT_CONFIG_PATH) -> None:
     built = _facts_for_week(load_config(config), week)
     typer.echo(json.dumps(built, indent=2))
     typer.echo(f"\nWrote {FACTS_DIR / f'{week}.json'}", err=True)
+
+
+@app.command()
+def run(
+    week: WeekOption,
+    config: ConfigOption = DEFAULT_CONFIG_PATH,
+    out_dir: Annotated[Path, typer.Option(help="Where reports are written.")] = REPORTS_DIR,
+    pdf: Annotated[bool, typer.Option("--pdf/--html-only", help="Build the PDF.")] = True,
+) -> None:
+    """Build the weekly report for one ISO week (HTML, and PDF via WeasyPrint)."""
+    cfg = load_config(config)
+    key = load_secrets().openrouter_api_key
+    try:
+        paths = render_report(week, cfg, key.get_secret_value() if key else None, out_dir, pdf=pdf)
+    except PdfUnavailableError as exc:
+        typer.echo(f"{exc}\nThe HTML version is at {out_dir / f'{week}.html'}", err=True)
+        raise typer.Exit(1) from exc
+    except ValueError as exc:  # unknown or partial week
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"narrative: {paths.narrative.source}")
+    typer.echo(f"html: {paths.html}")
+    if paths.pdf:
+        typer.echo(f"pdf:  {paths.pdf}")
 
 
 @app.command()
