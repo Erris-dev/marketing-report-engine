@@ -14,6 +14,7 @@ import yaml
 
 from mre import __version__, schemas
 from mre.config import DEFAULT_CONFIG_PATH, AppConfig, load_config, load_secrets
+from mre.deliver import DeliveryError, deliver
 from mre.facts import build_facts
 from mre.metrics import complete_weeks
 from mre.narrative import generate_narrative
@@ -83,10 +84,15 @@ def run(
     config: ConfigOption = DEFAULT_CONFIG_PATH,
     out_dir: Annotated[Path, typer.Option(help="Where reports are written.")] = REPORTS_DIR,
     pdf: Annotated[bool, typer.Option("--pdf/--html-only", help="Build the PDF.")] = True,
+    send: Annotated[
+        bool,
+        typer.Option("--deliver/--no-deliver", help="Deliver via delivery.method in config."),
+    ] = True,
 ) -> None:
-    """Build the weekly report for one ISO week (HTML, and PDF via WeasyPrint)."""
+    """Build the weekly report for one ISO week and deliver it (email or none)."""
     cfg = load_config(config)
-    key = load_secrets().openrouter_api_key
+    secrets = load_secrets()
+    key = secrets.openrouter_api_key
     try:
         paths = render_report(week, cfg, key.get_secret_value() if key else None, out_dir, pdf=pdf)
     except PdfUnavailableError as exc:
@@ -99,6 +105,64 @@ def run(
     typer.echo(f"html: {paths.html}")
     if paths.pdf:
         typer.echo(f"pdf:  {paths.pdf}")
+    if send and paths.pdf:
+        try:
+            result = deliver(
+                paths.pdf,
+                week,
+                paths.narrative.output,
+                paths.narrative.disclosure,
+                cfg.delivery,
+                secrets,
+            )
+        except DeliveryError as exc:
+            typer.echo(f"delivery failed: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        typer.echo(f"delivery: {result.method} ({result.detail})")
+
+
+@app.command()
+def backfill(
+    config: ConfigOption = DEFAULT_CONFIG_PATH,
+    out_dir: Annotated[Path, typer.Option(help="Where reports are written.")] = REPORTS_DIR,
+    pdf: Annotated[bool, typer.Option("--pdf/--html-only", help="Build PDFs.")] = True,
+) -> None:
+    """Build a report for every complete week in the data (no delivery)."""
+    cfg = load_config(config)
+    key = load_secrets().openrouter_api_key
+    prepared = prepare(cfg)  # computed once, shared by every week
+    weeks = complete_weeks(prepared.weekly)
+    sources: dict[str, int] = {}
+    for week in weeks:
+        paths = render_report(
+            week,
+            cfg,
+            key.get_secret_value() if key else None,
+            out_dir,
+            prepared=prepared,
+            pdf=pdf,
+        )
+        sources[paths.narrative.source] = sources.get(paths.narrative.source, 0) + 1
+        typer.echo(f"{week}: {paths.pdf or paths.html} ({paths.narrative.source})")
+    summary = ", ".join(f"{n} {s}" for s, n in sorted(sources.items()))
+    typer.echo(f"\n{len(weeks)} reports written to {out_dir} (narratives: {summary})")
+
+
+@app.command()
+def serve(
+    config: ConfigOption = DEFAULT_CONFIG_PATH,
+    host: Annotated[str, typer.Option(help="Bind address (no auth: keep it local).")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Port.")] = 8000,
+) -> None:
+    """Run the HTTP API (POST /reports, GET /reports/{week})."""
+    import uvicorn
+
+    from mre.api import create_app
+
+    cfg = load_config(config)
+    key = load_secrets().openrouter_api_key
+    api = create_app(cfg, api_key=key.get_secret_value() if key else None, out_dir=REPORTS_DIR)
+    uvicorn.run(api, host=host, port=port)
 
 
 @app.command()
