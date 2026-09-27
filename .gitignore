@@ -29,3 +29,9 @@ out/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local planning notes and personal docs (not part of the project)
+CLAUDE.md
+PROJECT_BRIEF.md
+*.plan.md
+docs/How_It_Was_Built.docx
