@@ -1,0 +1,63 @@
+name: Weekly report
+
+# The GA4 sample is historical, so each run reports the NEXT week of the dataset
+# (tracked in out/state.json) and wraps around after the last one. See README.
+on:
+  schedule:
+    - cron: "0 7 * * 1" # Mondays 07:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write # commit the advanced out/state.json
+
+concurrency:
+  group: weekly-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore LLM narrative cache
+        uses: actions/cache@v4
+        with:
+          path: data/llm_cache
+          key: llm-cache-${{ github.run_id }}
+          restore-keys: llm-cache-
+
+      - name: Build image
+        run: docker build -t mre .
+
+      - name: Generate (and deliver) the next report
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          REPORT_RECIPIENTS: ${{ secrets.REPORT_RECIPIENTS }}
+        run: |
+          mkdir -p out data
+          # Email only when Gmail secrets are configured; otherwise just build the PDF.
+          deliver="--no-deliver"
+          if [ -n "$SMTP_PASSWORD" ]; then deliver="--deliver"; fi
+          # Secrets are passed by name (-e VAR), never written to disk or the log.
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e OPENROUTER_API_KEY -e SMTP_USER -e SMTP_PASSWORD -e REPORT_RECIPIENTS \
+            -v "$PWD/out:/app/out" -v "$PWD/data:/app/data" \
+            mre scheduled "$deliver"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report
+          path: out/reports/*.pdf
+
+      - name: Commit advanced state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add out/state.json
+          week=$(python3 -c "import json; print(json.load(open('out/state.json'))['last_week'])")
+          git commit -m "chore: weekly report state -> ${week} [skip ci]" || exit 0
+          git push

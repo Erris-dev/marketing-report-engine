@@ -34,7 +34,16 @@ class SourceConfig(_Strict):
     # Hard cap passed to BigQuery: a query that would scan more fails instead of billing.
     max_bytes_billed_gb: float = Field(5, gt=0)
     raw_path: Path = Path("data/raw/ga4_daily.parquet")
+    # Committed copy of the extract (public sample data, 552 rows) so CI and fresh clones
+    # run without Google Cloud. Used only when raw_path does not exist.
+    snapshot_path: Path | None = Path("sample_data/ga4_daily.parquet")
     quarantine_dir: Path = Path("data/quarantine")
+
+    def input_path(self) -> Path:
+        """Local extract if present, else the committed snapshot."""
+        if self.raw_path.exists() or self.snapshot_path is None:
+            return self.raw_path
+        return self.snapshot_path if self.snapshot_path.exists() else self.raw_path
 
     @model_validator(mode="after")
     def _ordered_dates(self) -> SourceConfig:

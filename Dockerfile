@@ -25,6 +25,7 @@ COPY src ./src
 COPY sql ./sql
 COPY templates ./templates
 COPY prompts ./prompts
+COPY sample_data ./sample_data
 COPY config.yaml ./
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \

@@ -22,6 +22,7 @@ from mre.pipeline import prepare
 from mre.render import PdfUnavailableError, render_report
 from mre.sources import ga4_bigquery as ga4
 from mre.sources import sim_spend as sim
+from mre.state import DEFAULT_STATE_PATH, RunState, load_state, next_week, save_state
 from mre.weeks import iso_week_label
 
 app = typer.Typer(
@@ -149,6 +150,46 @@ def backfill(
 
 
 @app.command()
+def scheduled(
+    config: ConfigOption = DEFAULT_CONFIG_PATH,
+    state_path: Annotated[Path, typer.Option("--state", help="State file.")] = DEFAULT_STATE_PATH,
+    out_dir: Annotated[Path, typer.Option(help="Where reports are written.")] = REPORTS_DIR,
+    send: Annotated[
+        bool,
+        typer.Option("--deliver/--no-deliver", help="Deliver via delivery.method in config."),
+    ] = True,
+) -> None:
+    """Report the next week in the dataset (see state.py) and advance the state file."""
+    cfg = load_config(config)
+    secrets = load_secrets()
+    key = secrets.openrouter_api_key
+    prepared = prepare(cfg)
+    current = load_state(state_path)
+    week = next_week(complete_weeks(prepared.weekly), current)
+    typer.echo(f"scheduled run {current.runs + 1}: reporting {week}")
+    paths = render_report(
+        week, cfg, key.get_secret_value() if key else None, out_dir, prepared=prepared
+    )
+    typer.echo(f"pdf: {paths.pdf} (narrative: {paths.narrative.source})")
+    if send and paths.pdf:
+        try:
+            result = deliver(
+                paths.pdf,
+                week,
+                paths.narrative.output,
+                paths.narrative.disclosure,
+                cfg.delivery,
+                secrets,
+            )
+        except DeliveryError as exc:
+            typer.echo(f"delivery failed: {exc}", err=True)
+            raise typer.Exit(2) from exc
+        typer.echo(f"delivery: {result.method} ({result.detail})")
+    # Advance only after the report (and delivery, if requested) succeeded.
+    save_state(state_path, RunState(last_week=week, runs=current.runs + 1))
+
+
+@app.command()
 def serve(
     config: ConfigOption = DEFAULT_CONFIG_PATH,
     host: Annotated[str, typer.Option(help="Bind address (no auth: keep it local).")] = "127.0.0.1",
@@ -241,7 +282,7 @@ def validate(config: ConfigOption = DEFAULT_CONFIG_PATH) -> None:
     src = cfg.source
     tables = {
         "ga4_daily": (
-            ga4.load_raw(src.raw_path),
+            ga4.load_raw(src.input_path()),
             schemas.ga4_daily_schema(src.start_date, src.end_date),
         ),
         "sim_spend": (

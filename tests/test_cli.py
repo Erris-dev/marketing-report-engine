@@ -6,45 +6,11 @@ Each test runs in a temporary directory with the API key blanked, so the real
 
 from pathlib import Path
 
-import pytest
-import yaml
 from typer.testing import CliRunner
 
 from mre.cli import app
 
-from .conftest import END, REPO_ROOT, START, synthetic_ga4
-
 runner = CliRunner()
-
-
-@pytest.fixture
-def workdir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    monkeypatch.chdir(tmp_path)
-    for name in ("OPENROUTER_API_KEY", "SMTP_USER", "SMTP_PASSWORD", "REPORT_RECIPIENTS"):
-        monkeypatch.setenv(name, "")
-    raw = tmp_path / "data" / "raw" / "ga4_daily.parquet"
-    raw.parent.mkdir(parents=True)
-    synthetic_ga4().to_parquet(raw, index=False)
-    config = {
-        "source": {
-            "start_date": START.isoformat(),
-            "end_date": END.isoformat(),
-            "raw_path": str(raw),
-            "quarantine_dir": str(tmp_path / "data" / "quarantine"),
-        },
-        "channels": {"paid": ["paid_search"]},
-        "spend_simulation": {
-            "seasonality": False,
-            "output_path": str(tmp_path / "data" / "raw" / "sim_spend.parquet"),
-        },
-        "llm": {
-            "cache_dir": str(tmp_path / "llm_cache"),
-            "system_prompt_path": str(REPO_ROOT / "prompts" / "narrative_system_v2.md"),
-        },
-        "delivery": {"method": "none"},
-    }
-    (tmp_path / "config.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
-    return tmp_path
 
 
 def test_run_builds_html_and_skips_delivery(workdir: Path) -> None:

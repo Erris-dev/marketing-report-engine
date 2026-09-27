@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 import pytest
+import yaml
 
 from mre.config import AppConfig
 from mre.facts import build_facts
@@ -93,3 +94,34 @@ def facts(prepared: Prepared, config: AppConfig) -> dict[str, Any]:
     return build_facts(
         "2021-W01", prepared.weekly, prepared.anomalies, prepared.quarantined_rows, config
     )
+
+
+@pytest.fixture
+def workdir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Temp project dir for CLI tests: synthetic data, blank secrets, no .env."""
+    monkeypatch.chdir(tmp_path)
+    for name in ("OPENROUTER_API_KEY", "SMTP_USER", "SMTP_PASSWORD", "REPORT_RECIPIENTS"):
+        monkeypatch.setenv(name, "")
+    raw = tmp_path / "data" / "raw" / "ga4_daily.parquet"
+    raw.parent.mkdir(parents=True)
+    synthetic_ga4().to_parquet(raw, index=False)
+    config = {
+        "source": {
+            "start_date": START.isoformat(),
+            "end_date": END.isoformat(),
+            "raw_path": str(raw),
+            "quarantine_dir": str(tmp_path / "data" / "quarantine"),
+        },
+        "channels": {"paid": ["paid_search"]},
+        "spend_simulation": {
+            "seasonality": False,
+            "output_path": str(tmp_path / "data" / "raw" / "sim_spend.parquet"),
+        },
+        "llm": {
+            "cache_dir": str(tmp_path / "llm_cache"),
+            "system_prompt_path": str(REPO_ROOT / "prompts" / "narrative_system_v2.md"),
+        },
+        "delivery": {"method": "none"},
+    }
+    (tmp_path / "config.yaml").write_text(yaml.safe_dump(config), encoding="utf-8")
+    return tmp_path

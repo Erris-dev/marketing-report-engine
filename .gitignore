@@ -22,6 +22,7 @@ data/
 out/*
 !out/samples/
 !out/samples/**
+!out/state.json
 
 # Editors / OS
 .vscode/

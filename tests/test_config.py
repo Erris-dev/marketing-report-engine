@@ -97,3 +97,15 @@ def test_cli_help() -> None:
     result = CliRunner().invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "check-config" in result.output
+
+
+def test_input_path_prefers_local_extract_then_snapshot(tmp_path: Path) -> None:
+    from mre.config import SourceConfig
+
+    raw, snap = tmp_path / "raw.parquet", tmp_path / "snap.parquet"
+    cfg = SourceConfig(raw_path=raw, snapshot_path=snap)
+    assert cfg.input_path() == raw  # neither exists: report the extract path
+    snap.write_bytes(b"x")
+    assert cfg.input_path() == snap
+    raw.write_bytes(b"x")
+    assert cfg.input_path() == raw

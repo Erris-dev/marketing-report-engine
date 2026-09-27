@@ -50,7 +50,7 @@ def prepare_from_frames(raw: pd.DataFrame, spend: pd.DataFrame, cfg: AppConfig) 
 
 
 def prepare(cfg: AppConfig) -> Prepared:
-    raw = ga4.load_raw(cfg.source.raw_path)
+    raw = ga4.load_raw(cfg.source.input_path())
     spend = simulate_spend(
         cfg.channels.paid, cfg.source.start_date, cfg.source.end_date, cfg.spend_simulation
     )
